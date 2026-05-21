@@ -39,6 +39,7 @@ body {
   height: 100%;
   display: grid;
   place-items: center;
+  pointer-events: none;
 }
 
 .pet-loading {
@@ -68,6 +69,7 @@ body {
   -webkit-user-select: none;
   user-select: none;
   will-change: transform;
+  pointer-events: auto;
 }
 
 .pet-button:active {
@@ -85,7 +87,6 @@ body {
   image-rendering: auto;
   transform: scale(1.18);
   transform-origin: center bottom;
-  filter: drop-shadow(0 14px 14px rgba(0, 0, 0, 0.22));
   pointer-events: none;
 }
 
@@ -108,6 +109,7 @@ body {
   color: #f1ffd1;
   transform: translateX(-50%);
   user-select: text;
+  pointer-events: auto;
 }
 
 .spark-bubble::after {

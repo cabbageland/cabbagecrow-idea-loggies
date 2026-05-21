@@ -18,6 +18,7 @@ const MAC_SCREEN_SAVER_WINDOW_LEVEL: isize = 1000;
 struct MacWindowPolicy {
     collection_behavior_bits: usize,
     window_level: isize,
+    has_shadow: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -68,6 +69,7 @@ fn fullscreen_pet_policy() -> MacWindowPolicy {
             | MAC_FULLSCREEN_AUXILIARY
             | MAC_CAN_JOIN_ALL_APPLICATIONS,
         window_level: MAC_SCREEN_SAVER_WINDOW_LEVEL,
+        has_shadow: false,
     }
 }
 
@@ -94,7 +96,10 @@ fn apply_fullscreen_app_policy(_app: &tauri::App) -> tauri::Result<()> {
 
 #[cfg(target_os = "macos")]
 fn apply_fullscreen_pet_policy(window: &tauri::WebviewWindow) {
-    use objc2::{msg_send, runtime::AnyObject};
+    use objc2::{
+        msg_send,
+        runtime::{AnyObject, Bool},
+    };
 
     let Ok(ns_window) = window.ns_window() else {
         return;
@@ -107,6 +112,8 @@ fn apply_fullscreen_pet_policy(window: &tauri::WebviewWindow) {
     unsafe {
         let _: () = msg_send![ns_window, setCollectionBehavior: behavior];
         let _: () = msg_send![ns_window, setLevel: policy.window_level];
+        let has_shadow = Bool::new(policy.has_shadow);
+        let _: () = msg_send![ns_window, setHasShadow: has_shadow];
         let _: () = msg_send![ns_window, orderFrontRegardless];
     }
 }
@@ -157,6 +164,7 @@ mod tests {
         assert!(policy.collection_behavior_bits & MAC_FULLSCREEN_AUXILIARY != 0);
         assert!(policy.collection_behavior_bits & MAC_STATIONARY != 0);
         assert!(policy.window_level > MAC_FLOATING_WINDOW_LEVEL);
+        assert!(!policy.has_shadow);
     }
 
     #[test]

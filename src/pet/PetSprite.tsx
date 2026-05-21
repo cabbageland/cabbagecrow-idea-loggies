@@ -6,10 +6,12 @@ import {
   LogicalSize,
   Window as TauriWindow,
   currentMonitor,
+  cursorPosition,
   getCurrentWindow,
 } from "@tauri-apps/api/window";
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getFrameDuration, getFrameStyle, getStateConfig } from "./animation";
+import { getInteractiveRect, isPointInsideInteractiveRects } from "./cursorPassthrough";
 import { chooseFreeRangeTarget, interpolatePosition } from "./freeRange";
 import { getDragDirection, getKeyboardMode, getModifiedClickMode } from "./interaction";
 import { parseShortcutUrl } from "./shortcut";
@@ -141,6 +143,8 @@ export default function PetSprite() {
   const [freeRangeEnabled, setFreeRangeEnabled] = useState(readFreeRangeEnabled);
   const [sparkCadence, setSparkCadence] = useState<SparkCadence>(readSparkCadence);
   const pointerStart = useRef<PointerStart | null>(null);
+  const petButtonRef = useRef<HTMLButtonElement | null>(null);
+  const sparkBubbleRef = useRef<HTMLElement | null>(null);
   const lastDirection = useRef<Direction>("right");
   const reactionTimer = useRef<number | null>(null);
   const longPressTimer = useRef<number | null>(null);
@@ -149,6 +153,7 @@ export default function PetSprite() {
   const sparksRef = useRef(sparks);
   const previousSparkId = useRef<string | null>(null);
   const freeRangeEnabledRef = useRef(freeRangeEnabled);
+  const cursorIgnoringRef = useRef(false);
   const pendingSparkCount = useMemo(() => getPendingSparks(sparks).length, [sparks]);
 
   useEffect(() => {
@@ -234,6 +239,77 @@ export default function PetSprite() {
       // Browser previews and permission-limited windows can reject native sizing.
     });
   }, [petScale]);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+
+    let updateInFlight = false;
+    const appWindow = getCurrentWindow();
+
+    const setCursorIgnoring = async (ignore: boolean) => {
+      if (cursorIgnoringRef.current === ignore) {
+        return;
+      }
+
+      cursorIgnoringRef.current = ignore;
+      try {
+        await appWindow.setIgnoreCursorEvents(ignore);
+      } catch {
+        cursorIgnoringRef.current = !ignore;
+      }
+    };
+
+    const updateCursorPassthrough = () => {
+      if (updateInFlight) {
+        return;
+      }
+
+      updateInFlight = true;
+      void (async () => {
+        try {
+          if (pointerStart.current) {
+            await setCursorIgnoring(false);
+            return;
+          }
+
+          const interactiveRects = [getInteractiveRect(petButtonRef.current), getInteractiveRect(sparkBubbleRef.current)]
+            .filter((rect) => rect !== null);
+
+          if (interactiveRects.length === 0) {
+            await setCursorIgnoring(false);
+            return;
+          }
+
+          const [cursor, windowPosition, scaleFactor] = await Promise.all([
+            cursorPosition(),
+            appWindow.outerPosition(),
+            appWindow.scaleFactor(),
+          ]);
+          const localCursor = {
+            x: (cursor.x - windowPosition.x) / scaleFactor,
+            y: (cursor.y - windowPosition.y) / scaleFactor,
+          };
+
+          await setCursorIgnoring(!isPointInsideInteractiveRects(localCursor, interactiveRects));
+        } finally {
+          updateInFlight = false;
+        }
+      })();
+    };
+
+    updateCursorPassthrough();
+    const timer = window.setInterval(updateCursorPassthrough, 64);
+
+    return () => {
+      window.clearInterval(timer);
+      if (cursorIgnoringRef.current) {
+        cursorIgnoringRef.current = false;
+        void appWindow.setIgnoreCursorEvents(false).catch(() => undefined);
+      }
+    };
+  }, [surfacedSpark]);
 
   const playReaction = useCallback((reaction: PetState, duration = REACTION_MS) => {
     if (reactionTimer.current !== null) {
@@ -703,7 +779,7 @@ export default function PetSprite() {
   return (
     <div className="pet-stack">
       {surfacedSpark && (
-        <aside className="spark-bubble" aria-live="polite">
+        <aside ref={sparkBubbleRef} className="spark-bubble" aria-live="polite">
           <p>{surfacedSpark.text}</p>
           <div className="spark-bubble-actions">
             <button type="button" onClick={() => resolveSparkById(surfacedSpark.id)}>
@@ -716,6 +792,7 @@ export default function PetSprite() {
         </aside>
       )}
       <button
+        ref={petButtonRef}
         className="pet-button"
         style={petButtonStyle}
         type="button"
