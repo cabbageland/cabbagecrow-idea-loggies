@@ -1,0 +1,27 @@
+.DS_Store
+
+# JavaScript dependencies and build output
+node_modules/
+dist/
+dist-macos/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Tauri/Rust build output and generated schemas
+src-tauri/target/
+src-tauri/gen/
+
+# Local-only artifacts
+.superpowers/
+.env
+.env.*
+!.env.example
+
+# Python helper caches
+__pycache__/
+*.py[cod]
+
+# Packaged app artifacts should be attached to releases, not committed to git history.
+*.app
+*.dmg

@@ -1,0 +1,21 @@
+{
+  "id": "cabbagecrow",
+  "displayName": "CabbageCrow",
+  "description": "A clever bio-mech corvid with cabbage-leaf wings, bright sensor eyes, and chaotic scout energy.",
+  "spritesheetPath": "spritesheet.webp",
+  "cellWidth": 192,
+  "cellHeight": 208,
+  "columns": 8,
+  "states": [
+    "idle",
+    "running-right",
+    "running-left",
+    "waving",
+    "jumping",
+    "failed",
+    "waiting",
+    "running",
+    "review"
+  ],
+  "sourceMode": "generated-row-strips"
+}

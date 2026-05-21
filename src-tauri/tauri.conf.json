@@ -1,0 +1,88 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "CabbageCrow",
+  "version": "0.1.0",
+  "identifier": "com.tracyhan.cabbagecrow",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://127.0.0.1:1420",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "macOSPrivateApi": true,
+    "withGlobalTauri": false,
+    "security": {
+      "csp": null,
+      "capabilities": [
+        {
+          "identifier": "main-window",
+          "description": "Allow the CabbageCrow pet and dashboard windows to coordinate movement, sizing, and visibility.",
+          "windows": ["main", "dashboard"],
+          "permissions": [
+            "core:default",
+            "core:window:allow-start-dragging",
+            "core:window:allow-start-resize-dragging",
+            "core:window:allow-set-size",
+            "core:window:allow-set-position",
+            "core:window:allow-outer-position",
+            "core:window:allow-outer-size",
+            "core:window:allow-current-monitor",
+            "core:window:allow-show",
+            "core:window:allow-hide",
+            "core:window:allow-set-focus"
+          ]
+        }
+      ]
+    },
+    "windows": [
+      {
+        "label": "main",
+        "title": "CabbageCrow",
+        "width": 320,
+        "height": 320,
+        "minWidth": 240,
+        "minHeight": 240,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "shadow": false,
+        "center": true,
+        "backgroundColor": "#00000000"
+      },
+      {
+        "label": "dashboard",
+        "title": "CabbageCrow Bucket",
+        "width": 390,
+        "height": 620,
+        "minWidth": 360,
+        "minHeight": 460,
+        "resizable": true,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "shadow": true,
+        "center": true,
+        "visible": false,
+        "backgroundColor": "#00000000"
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app"],
+    "category": "Utility",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "shortDescription": "A playful CabbageCrow desktop pet.",
+    "longDescription": "A standalone macOS desktop pet that animates a CabbageCrow companion."
+  }
+}
