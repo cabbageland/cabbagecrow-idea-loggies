@@ -5,6 +5,20 @@ use std::sync::{
 
 use tauri::{Emitter, Manager, RunEvent, State};
 
+const MAC_JOIN_ALL_SPACES: usize = 1 << 0;
+const MAC_STATIONARY: usize = 1 << 4;
+const MAC_IGNORES_CYCLE: usize = 1 << 6;
+const MAC_FULLSCREEN_AUXILIARY: usize = 1 << 8;
+#[cfg(test)]
+const MAC_FLOATING_WINDOW_LEVEL: isize = 3;
+const MAC_SCREEN_SAVER_WINDOW_LEVEL: isize = 1000;
+
+#[derive(Debug, Clone, Copy)]
+struct MacWindowPolicy {
+    collection_behavior_bits: usize,
+    window_level: isize,
+}
+
 #[derive(Default)]
 struct ShortcutState {
     frontend_ready: AtomicBool,
@@ -40,9 +54,53 @@ fn handle_opened_urls(app: &tauri::AppHandle, urls: Vec<tauri::Url>) {
     }
 }
 
+fn fullscreen_pet_policy() -> MacWindowPolicy {
+    MacWindowPolicy {
+        collection_behavior_bits: MAC_JOIN_ALL_SPACES
+            | MAC_STATIONARY
+            | MAC_IGNORES_CYCLE
+            | MAC_FULLSCREEN_AUXILIARY,
+        window_level: MAC_SCREEN_SAVER_WINDOW_LEVEL,
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn apply_fullscreen_pet_policy(window: &tauri::WebviewWindow) {
+    use objc2::{msg_send, runtime::AnyObject};
+
+    let Ok(ns_window) = window.ns_window() else {
+        return;
+    };
+    let policy = fullscreen_pet_policy();
+    let ns_window = unsafe { &*(ns_window.cast::<AnyObject>()) };
+    let current_behavior: usize = unsafe { msg_send![ns_window, collectionBehavior] };
+    let behavior = current_behavior | policy.collection_behavior_bits;
+
+    unsafe {
+        let _: () = msg_send![ns_window, setCollectionBehavior: behavior];
+        let _: () = msg_send![ns_window, setLevel: policy.window_level];
+        let _: () = msg_send![ns_window, orderFrontRegardless];
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn apply_fullscreen_pet_policy(_window: &tauri::WebviewWindow) {}
+
+fn configure_overlay_windows(app: &tauri::App) {
+    for label in ["main", "dashboard"] {
+        if let Some(window) = app.get_webview_window(label) {
+            apply_fullscreen_pet_policy(&window);
+        }
+    }
+}
+
 fn main() {
     let app = tauri::Builder::default()
         .manage(ShortcutState::default())
+        .setup(|app| {
+            configure_overlay_windows(app);
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             frontend_ready,
             drain_pending_shortcuts
@@ -55,4 +113,19 @@ fn main() {
             handle_opened_urls(app_handle, urls);
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fullscreen_pet_policy_joins_fullscreen_spaces() {
+        let policy = fullscreen_pet_policy();
+
+        assert!(policy.collection_behavior_bits & MAC_JOIN_ALL_SPACES != 0);
+        assert!(policy.collection_behavior_bits & MAC_FULLSCREEN_AUXILIARY != 0);
+        assert!(policy.collection_behavior_bits & MAC_STATIONARY != 0);
+        assert!(policy.window_level > MAC_FLOATING_WINDOW_LEVEL);
+    }
 }
