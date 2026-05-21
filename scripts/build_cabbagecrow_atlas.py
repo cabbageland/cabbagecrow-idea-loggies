@@ -22,7 +22,8 @@ ROWS = 9
 ATLAS_WIDTH = CELL_WIDTH * COLUMNS
 ATLAS_HEIGHT = CELL_HEIGHT * ROWS
 MAGENTA = np.array([255, 0, 255], dtype=np.int16)
-KEY_DISTANCE_THRESHOLD = 260
+KEY_DISTANCE_THRESHOLD = 210
+SOLID_ALPHA_THRESHOLD = 32
 
 ROW_STATES = [
     "idle",
@@ -199,6 +200,15 @@ def remove_detached_artifacts(sprite: Image.Image) -> Image.Image:
     return Image.fromarray(arr, "RGBA")
 
 
+def solidify_alpha(sprite: Image.Image) -> Image.Image:
+    arr = np.array(sprite.convert("RGBA"))
+    alpha = arr[:, :, 3]
+    opaque = alpha >= SOLID_ALPHA_THRESHOLD
+    arr[:, :, 3] = np.where(opaque, 255, 0).astype(np.uint8)
+    arr[~opaque, 0:3] = 0
+    return Image.fromarray(arr, "RGBA")
+
+
 def fit_sprite(sprite: Image.Image) -> Image.Image:
     max_width = 184
     max_height = 198
@@ -265,7 +275,7 @@ def main() -> None:
 
         for col in range(COLUMNS):
             raw_sprite = crop_generated_slot(row_source, col)
-            sprite = fit_sprite(remove_detached_artifacts(raw_sprite))
+            sprite = solidify_alpha(fit_sprite(remove_detached_artifacts(raw_sprite)))
             x = col * CELL_WIDTH + (CELL_WIDTH - sprite.width) // 2
             y = row_bottom - 8 - sprite.height
             y = max(row * CELL_HEIGHT + 4, min(y, row_bottom - sprite.height - 4))

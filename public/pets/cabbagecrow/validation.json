@@ -35,7 +35,7 @@
       "source": "/Users/tracyhan/Documents/Codex/2026-05-19/say-hi-to-alaa-dr-sheinberg/assets/source/cabbagecrow-rows/idle.png",
       "sourceWidth": 2172,
       "sourceHeight": 724,
-      "spriteWidth": 166,
+      "spriteWidth": 167,
       "spriteHeight": 198
     },
     {
@@ -44,7 +44,7 @@
       "source": "/Users/tracyhan/Documents/Codex/2026-05-19/say-hi-to-alaa-dr-sheinberg/assets/source/cabbagecrow-rows/idle.png",
       "sourceWidth": 2172,
       "sourceHeight": 724,
-      "spriteWidth": 169,
+      "spriteWidth": 168,
       "spriteHeight": 198
     },
     {
@@ -62,7 +62,7 @@
       "source": "/Users/tracyhan/Documents/Codex/2026-05-19/say-hi-to-alaa-dr-sheinberg/assets/source/cabbagecrow-rows/idle.png",
       "sourceWidth": 2172,
       "sourceHeight": 724,
-      "spriteWidth": 168,
+      "spriteWidth": 167,
       "spriteHeight": 198
     },
     {
@@ -153,7 +153,7 @@
       "sourceWidth": 2172,
       "sourceHeight": 724,
       "spriteWidth": 184,
-      "spriteHeight": 151
+      "spriteHeight": 152
     },
     {
       "state": "running-left",
@@ -162,7 +162,7 @@
       "sourceWidth": 2172,
       "sourceHeight": 724,
       "spriteWidth": 184,
-      "spriteHeight": 138
+      "spriteHeight": 139
     },
     {
       "state": "running-left",
@@ -171,7 +171,7 @@
       "sourceWidth": 2172,
       "sourceHeight": 724,
       "spriteWidth": 184,
-      "spriteHeight": 141
+      "spriteHeight": 142
     },
     {
       "state": "running-left",
@@ -180,7 +180,7 @@
       "sourceWidth": 2172,
       "sourceHeight": 724,
       "spriteWidth": 184,
-      "spriteHeight": 140
+      "spriteHeight": 139
     },
     {
       "state": "running-left",
@@ -287,7 +287,7 @@
       "source": "/Users/tracyhan/Documents/Codex/2026-05-19/say-hi-to-alaa-dr-sheinberg/assets/source/cabbagecrow-rows/waving.png",
       "sourceWidth": 2172,
       "sourceHeight": 724,
-      "spriteWidth": 161,
+      "spriteWidth": 162,
       "spriteHeight": 198
     },
     {
@@ -323,7 +323,7 @@
       "source": "/Users/tracyhan/Documents/Codex/2026-05-19/say-hi-to-alaa-dr-sheinberg/assets/source/cabbagecrow-rows/jumping.png",
       "sourceWidth": 2172,
       "sourceHeight": 724,
-      "spriteWidth": 176,
+      "spriteWidth": 175,
       "spriteHeight": 198
     },
     {
@@ -351,7 +351,7 @@
       "sourceWidth": 2172,
       "sourceHeight": 724,
       "spriteWidth": 184,
-      "spriteHeight": 167
+      "spriteHeight": 166
     },
     {
       "state": "jumping",
@@ -360,7 +360,7 @@
       "sourceWidth": 2172,
       "sourceHeight": 724,
       "spriteWidth": 184,
-      "spriteHeight": 155
+      "spriteHeight": 154
     },
     {
       "state": "jumping",
@@ -396,7 +396,7 @@
       "sourceWidth": 2172,
       "sourceHeight": 724,
       "spriteWidth": 184,
-      "spriteHeight": 143
+      "spriteHeight": 144
     },
     {
       "state": "failed",
@@ -423,7 +423,7 @@
       "sourceWidth": 2172,
       "sourceHeight": 724,
       "spriteWidth": 184,
-      "spriteHeight": 182
+      "spriteHeight": 181
     },
     {
       "state": "failed",
@@ -467,7 +467,7 @@
       "source": "/Users/tracyhan/Documents/Codex/2026-05-19/say-hi-to-alaa-dr-sheinberg/assets/source/cabbagecrow-rows/waiting.png",
       "sourceWidth": 2172,
       "sourceHeight": 724,
-      "spriteWidth": 157,
+      "spriteWidth": 158,
       "spriteHeight": 198
     },
     {
@@ -476,7 +476,7 @@
       "source": "/Users/tracyhan/Documents/Codex/2026-05-19/say-hi-to-alaa-dr-sheinberg/assets/source/cabbagecrow-rows/waiting.png",
       "sourceWidth": 2172,
       "sourceHeight": 724,
-      "spriteWidth": 163,
+      "spriteWidth": 162,
       "spriteHeight": 198
     },
     {
@@ -504,7 +504,7 @@
       "sourceWidth": 2172,
       "sourceHeight": 724,
       "spriteWidth": 184,
-      "spriteHeight": 182
+      "spriteHeight": 181
     },
     {
       "state": "waiting",
@@ -512,7 +512,7 @@
       "source": "/Users/tracyhan/Documents/Codex/2026-05-19/say-hi-to-alaa-dr-sheinberg/assets/source/cabbagecrow-rows/waiting.png",
       "sourceWidth": 2172,
       "sourceHeight": 724,
-      "spriteWidth": 162,
+      "spriteWidth": 163,
       "spriteHeight": 198
     },
     {
@@ -530,7 +530,7 @@
       "source": "/Users/tracyhan/Documents/Codex/2026-05-19/say-hi-to-alaa-dr-sheinberg/assets/source/cabbagecrow-rows/running.png",
       "sourceWidth": 2172,
       "sourceHeight": 724,
-      "spriteWidth": 180,
+      "spriteWidth": 179,
       "spriteHeight": 198
     },
     {
@@ -567,7 +567,7 @@
       "sourceWidth": 2172,
       "sourceHeight": 724,
       "spriteWidth": 184,
-      "spriteHeight": 196
+      "spriteHeight": 194
     },
     {
       "state": "running",
@@ -593,7 +593,7 @@
       "source": "/Users/tracyhan/Documents/Codex/2026-05-19/say-hi-to-alaa-dr-sheinberg/assets/source/cabbagecrow-rows/review.png",
       "sourceWidth": 2172,
       "sourceHeight": 724,
-      "spriteWidth": 179,
+      "spriteWidth": 180,
       "spriteHeight": 198
     },
     {
@@ -602,7 +602,7 @@
       "source": "/Users/tracyhan/Documents/Codex/2026-05-19/say-hi-to-alaa-dr-sheinberg/assets/source/cabbagecrow-rows/review.png",
       "sourceWidth": 2172,
       "sourceHeight": 724,
-      "spriteWidth": 166,
+      "spriteWidth": 167,
       "spriteHeight": 198
     },
     {
@@ -612,7 +612,7 @@
       "sourceWidth": 2172,
       "sourceHeight": 724,
       "spriteWidth": 184,
-      "spriteHeight": 168
+      "spriteHeight": 167
     },
     {
       "state": "review",
@@ -620,7 +620,7 @@
       "source": "/Users/tracyhan/Documents/Codex/2026-05-19/say-hi-to-alaa-dr-sheinberg/assets/source/cabbagecrow-rows/review.png",
       "sourceWidth": 2172,
       "sourceHeight": 724,
-      "spriteWidth": 161,
+      "spriteWidth": 162,
       "spriteHeight": 198
     },
     {
