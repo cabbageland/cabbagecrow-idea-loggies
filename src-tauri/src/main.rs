@@ -9,6 +9,7 @@ const MAC_JOIN_ALL_SPACES: usize = 1 << 0;
 const MAC_STATIONARY: usize = 1 << 4;
 const MAC_IGNORES_CYCLE: usize = 1 << 6;
 const MAC_FULLSCREEN_AUXILIARY: usize = 1 << 8;
+const MAC_CAN_JOIN_ALL_APPLICATIONS: usize = 1 << 18;
 #[cfg(test)]
 const MAC_FLOATING_WINDOW_LEVEL: isize = 3;
 const MAC_SCREEN_SAVER_WINDOW_LEVEL: isize = 1000;
@@ -17,6 +18,11 @@ const MAC_SCREEN_SAVER_WINDOW_LEVEL: isize = 1000;
 struct MacWindowPolicy {
     collection_behavior_bits: usize,
     window_level: isize,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct MacAppPolicy {
+    uses_accessory_activation_policy: bool,
 }
 
 #[derive(Default)]
@@ -59,9 +65,31 @@ fn fullscreen_pet_policy() -> MacWindowPolicy {
         collection_behavior_bits: MAC_JOIN_ALL_SPACES
             | MAC_STATIONARY
             | MAC_IGNORES_CYCLE
-            | MAC_FULLSCREEN_AUXILIARY,
+            | MAC_FULLSCREEN_AUXILIARY
+            | MAC_CAN_JOIN_ALL_APPLICATIONS,
         window_level: MAC_SCREEN_SAVER_WINDOW_LEVEL,
     }
+}
+
+fn fullscreen_pet_app_policy() -> MacAppPolicy {
+    MacAppPolicy {
+        uses_accessory_activation_policy: true,
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn apply_fullscreen_app_policy(app: &tauri::App) -> tauri::Result<()> {
+    if fullscreen_pet_app_policy().uses_accessory_activation_policy {
+        app.handle()
+            .set_activation_policy(tauri::ActivationPolicy::Accessory)?;
+    }
+
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn apply_fullscreen_app_policy(_app: &tauri::App) -> tauri::Result<()> {
+    Ok(())
 }
 
 #[cfg(target_os = "macos")]
@@ -98,6 +126,7 @@ fn main() {
     let app = tauri::Builder::default()
         .manage(ShortcutState::default())
         .setup(|app| {
+            apply_fullscreen_app_policy(app)?;
             configure_overlay_windows(app);
             Ok(())
         })
@@ -124,8 +153,14 @@ mod tests {
         let policy = fullscreen_pet_policy();
 
         assert!(policy.collection_behavior_bits & MAC_JOIN_ALL_SPACES != 0);
+        assert!(policy.collection_behavior_bits & MAC_CAN_JOIN_ALL_APPLICATIONS != 0);
         assert!(policy.collection_behavior_bits & MAC_FULLSCREEN_AUXILIARY != 0);
         assert!(policy.collection_behavior_bits & MAC_STATIONARY != 0);
         assert!(policy.window_level > MAC_FLOATING_WINDOW_LEVEL);
+    }
+
+    #[test]
+    fn fullscreen_pet_app_policy_uses_accessory_activation() {
+        assert!(fullscreen_pet_app_policy().uses_accessory_activation_policy);
     }
 }
