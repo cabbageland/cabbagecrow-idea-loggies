@@ -185,7 +185,7 @@ body {
   content: "";
   filter: saturate(0.95) contrast(0.92);
   mask-image: radial-gradient(ellipse at center, #000 52%, rgba(0, 0, 0, 0.7) 72%, transparent 94%);
-  opacity: 0.16;
+  opacity: 0.24;
   pointer-events: none;
 }
 
