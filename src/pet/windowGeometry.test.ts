@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { getPetButtonScale, getPetWindowSize } from "./windowGeometry";
+import { BASE_PET_WINDOW, getPetButtonScale, getPetWindowSize } from "./windowGeometry";
 
 describe("pet window geometry", () => {
-  it("keeps the native window tight around the visible sprite", () => {
-    expect(getPetWindowSize(0.65)).toEqual({ width: 172, height: 184 });
-    expect(getPetWindowSize(1)).toEqual({ width: 252, height: 270 });
-    expect(getPetWindowSize(1.8)).toEqual({ width: 436, height: 469 });
+  it("keeps enough transparent breathing room around animated sprite frames", () => {
+    expect(getPetWindowSize(0.65)).toEqual({ width: BASE_PET_WINDOW, height: BASE_PET_WINDOW });
+    expect(getPetWindowSize(1)).toEqual({ width: BASE_PET_WINDOW, height: BASE_PET_WINDOW });
+    expect(getPetWindowSize(1.8)).toEqual({ width: 587, height: 587 });
   });
 
   it("keeps CSS scale independent from native window growth", () => {

@@ -80,7 +80,7 @@ function startDashboardDrag(event: ReactPointerEvent<HTMLElement>): void {
   if (
     event.button !== 0 ||
     (event.target instanceof Element &&
-      event.target.closest("button, input, select, textarea, a"))
+      event.target.closest("[data-dashboard-no-drag], button, input, select, textarea, a"))
   ) {
     return;
   }
@@ -156,8 +156,8 @@ export default function PetDashboard() {
   }
 
   return (
-    <main className="dashboard-shell" aria-label="CabbageCrow idea bucket">
-      <header className="dashboard-header" onPointerDown={startDashboardDrag}>
+    <main className="dashboard-shell" aria-label="CabbageCrow idea bucket" onPointerDown={startDashboardDrag}>
+      <header className="dashboard-header">
         <div>
           <p className="dashboard-kicker">cabbagecrow bioscan</p>
           <h1>idea loggies 🪵</h1>
@@ -191,7 +191,7 @@ export default function PetDashboard() {
         </article>
       </section>
 
-      <section className="dashboard-settings" aria-label="Pet settings">
+      <section className="dashboard-settings" aria-label="Pet settings" data-dashboard-no-drag>
         <label>
           <span>Free range</span>
           <input
@@ -213,7 +213,7 @@ export default function PetDashboard() {
         </label>
       </section>
 
-      <section className="spark-add-row" aria-label="Add a spark">
+      <section className="spark-add-row" aria-label="Add a spark" data-dashboard-no-drag>
         <input
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
@@ -229,7 +229,7 @@ export default function PetDashboard() {
         </button>
       </section>
 
-      <section className="nudged-spark" aria-label="Currently nudged spark">
+      <section className="nudged-spark" aria-label="Currently nudged spark" data-dashboard-no-drag>
         <div>
           <p className="dashboard-kicker">Currently Nudged</p>
           <p>{nudged?.text ?? "No spark pulled yet."}</p>
@@ -246,7 +246,7 @@ export default function PetDashboard() {
         </div>
       </section>
 
-      <section className="pending-sparks" aria-label="Pending sparks">
+      <section className="pending-sparks" aria-label="Pending sparks" data-dashboard-no-drag>
         <div className="pending-sparks-header">
           <span>Pending Sparks</span>
           <span>
