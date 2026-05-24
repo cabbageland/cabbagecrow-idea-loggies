@@ -31,4 +31,9 @@ describe("free range movement", () => {
     expect(shouldUpdateFreeRangePosition(100 + FREE_RANGE_POSITION_UPDATE_MS, 100, 0.2)).toBe(true);
     expect(shouldUpdateFreeRangePosition(120, 100, 1)).toBe(true);
   });
+
+  it("keeps free range movement near 30fps without uncapped native updates", () => {
+    expect(FREE_RANGE_POSITION_UPDATE_MS).toBeGreaterThanOrEqual(30);
+    expect(FREE_RANGE_POSITION_UPDATE_MS).toBeLessThanOrEqual(34);
+  });
 });

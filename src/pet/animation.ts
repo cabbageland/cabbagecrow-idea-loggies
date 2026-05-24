@@ -12,12 +12,12 @@ export const STATE_CONFIGS: Record<PetState, PetStateConfig> = {
   "running-right": {
     row: 1,
     frames: 8,
-    durations: [120, 120, 120, 120, 120, 120, 120, 220],
+    durations: [100, 100, 100, 100, 100, 100, 100, 180],
   },
   "running-left": {
     row: 2,
     frames: 8,
-    durations: [120, 120, 120, 120, 120, 120, 120, 220],
+    durations: [100, 100, 100, 100, 100, 100, 100, 180],
   },
   waving: {
     row: 3,

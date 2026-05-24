@@ -8,6 +8,15 @@ describe("animation runtime", () => {
     expect(getStateConfig("review")).toMatchObject({ row: 8, frames: 6 });
   });
 
+  it("keeps directional running frames smooth but still battery-friendly", () => {
+    for (const state of ["running-left", "running-right"]) {
+      const config = getStateConfig(state);
+
+      expect(config.durations.slice(0, -1).every((duration) => duration === 100)).toBe(true);
+      expect(config.durations.at(-1)).toBe(180);
+    }
+  });
+
   it("falls back unknown states to idle", () => {
     expect(normalizePetState("mystery")).toBe("idle");
   });

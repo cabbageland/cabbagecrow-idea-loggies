@@ -15,7 +15,7 @@ export interface Size {
   height: number;
 }
 
-export const FREE_RANGE_POSITION_UPDATE_MS = 50;
+export const FREE_RANGE_POSITION_UPDATE_MS = 33;
 
 export function chooseFreeRangeTarget(
   bounds: Bounds,
