@@ -2,6 +2,10 @@
 
 A standalone macOS desktop pet built with Tauri, React, and TypeScript. CabbageCrow floats on the desktop, reacts through animated modes, can roam in free-range mode, and keeps a playful "idea loggies" bucket for random sparks.
 
+![CabbageCrow idea loggies dashboard with desktop pet and nudge bubble](docs/images/cabbagecrow-idea-loggies.svg)
+
+CabbageCrow pairs a tiny desktop companion with an "idea loggies" board: capture stray sparks, let the pet randomly nudge one back into focus, and resolve ideas when they should leave the pool.
+
 ## What Is Included
 
 - Transparent always-on-top CabbageCrow pet window.
