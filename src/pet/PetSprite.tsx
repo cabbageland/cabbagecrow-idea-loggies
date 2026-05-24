@@ -10,6 +10,7 @@ import {
 } from "@tauri-apps/api/window";
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getFrameDuration, getFrameStyle, getStateConfig } from "./animation";
+import { DASHBOARD_DEFAULT_SIZE } from "./dashboardWindow";
 import { chooseFreeRangeTarget, interpolatePosition, shouldUpdateFreeRangePosition } from "./freeRange";
 import { getDragDirection, getKeyboardMode, getModifiedClickMode } from "./interaction";
 import { parseShortcutUrl } from "./shortcut";
@@ -279,6 +280,7 @@ export default function PetSprite() {
       if (!dashboard) {
         return;
       }
+      await dashboard.setSize(new LogicalSize(DASHBOARD_DEFAULT_SIZE.width, DASHBOARD_DEFAULT_SIZE.height));
       await dashboard.show();
       await dashboard.setFocus();
     } catch {

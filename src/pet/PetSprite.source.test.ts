@@ -9,4 +9,11 @@ describe("pet window event policy", () => {
     expect(source).not.toContain("cursorPosition");
     expect(source).not.toContain("cursorPassthrough");
   });
+
+  it("resizes the dashboard each time it opens", () => {
+    const source = readFileSync(new URL("./PetSprite.tsx", import.meta.url), "utf8");
+
+    expect(source).toContain("DASHBOARD_DEFAULT_SIZE");
+    expect(source).toContain("dashboard.setSize");
+  });
 });

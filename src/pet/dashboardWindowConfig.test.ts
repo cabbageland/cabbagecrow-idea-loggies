@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { DASHBOARD_DEFAULT_SIZE } from "./dashboardWindow";
 
 interface TauriWindowConfig {
   label: string;
@@ -18,9 +19,6 @@ describe("dashboard window config", () => {
     const config = JSON.parse(readFileSync(new URL("../../src-tauri/tauri.conf.json", import.meta.url), "utf8")) as TauriConfig;
     const dashboard = config.app.windows.find((windowConfig) => windowConfig.label === "dashboard");
 
-    expect(dashboard).toMatchObject({
-      width: 1424,
-      height: 980,
-    });
+    expect(dashboard).toMatchObject(DASHBOARD_DEFAULT_SIZE);
   });
 });
