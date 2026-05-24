@@ -58,8 +58,8 @@
       {
         "label": "dashboard",
         "title": "CabbageCrow Bucket",
-        "width": 1600,
-        "height": 1080,
+        "width": 800,
+        "height": 540,
         "minWidth": 360,
         "minHeight": 460,
         "resizable": true,
