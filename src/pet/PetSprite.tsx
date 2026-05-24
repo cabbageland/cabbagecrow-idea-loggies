@@ -6,18 +6,10 @@ import {
   LogicalSize,
   Window as TauriWindow,
   currentMonitor,
-  cursorPosition,
   getCurrentWindow,
 } from "@tauri-apps/api/window";
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getFrameDuration, getFrameStyle, getStateConfig } from "./animation";
-import {
-  type InteractiveRect,
-  type Point,
-  getCursorPassthroughPollMs,
-  getInteractiveRect,
-  shouldIgnoreCursorEvents,
-} from "./cursorPassthrough";
 import { chooseFreeRangeTarget, interpolatePosition, shouldUpdateFreeRangePosition } from "./freeRange";
 import { getDragDirection, getKeyboardMode, getModifiedClickMode } from "./interaction";
 import { parseShortcutUrl } from "./shortcut";
@@ -149,8 +141,6 @@ export default function PetSprite() {
   const [freeRangeEnabled, setFreeRangeEnabled] = useState(readFreeRangeEnabled);
   const [sparkCadence, setSparkCadence] = useState<SparkCadence>(readSparkCadence);
   const pointerStart = useRef<PointerStart | null>(null);
-  const petButtonRef = useRef<HTMLButtonElement | null>(null);
-  const sparkBubbleRef = useRef<HTMLElement | null>(null);
   const lastDirection = useRef<Direction>("right");
   const reactionTimer = useRef<number | null>(null);
   const longPressTimer = useRef<number | null>(null);
@@ -159,7 +149,6 @@ export default function PetSprite() {
   const sparksRef = useRef(sparks);
   const previousSparkId = useRef<string | null>(null);
   const freeRangeEnabledRef = useRef(freeRangeEnabled);
-  const cursorIgnoringRef = useRef(false);
   const pendingSparkCount = useMemo(() => getPendingSparks(sparks).length, [sparks]);
 
   useEffect(() => {
@@ -245,152 +234,6 @@ export default function PetSprite() {
       // Browser previews and permission-limited windows can reject native sizing.
     });
   }, [petScale]);
-
-  useEffect(() => {
-    if (!isTauriRuntime()) {
-      return;
-    }
-
-    let updateInFlight = false;
-    let recoveryTimer: number | null = null;
-    let disposed = false;
-    const appWindow = getCurrentWindow();
-
-    function getInteractiveRects(): InteractiveRect[] {
-      return [getInteractiveRect(petButtonRef.current), getInteractiveRect(sparkBubbleRef.current)].filter(
-        (rect): rect is InteractiveRect => rect !== null,
-      );
-    }
-
-    function stopRecoveryPolling(): void {
-      if (recoveryTimer === null) {
-        return;
-      }
-
-      window.clearInterval(recoveryTimer);
-      recoveryTimer = null;
-    }
-
-    function startRecoveryPolling(): void {
-      if (recoveryTimer !== null || disposed) {
-        return;
-      }
-
-      const pollMs = getCursorPassthroughPollMs(cursorIgnoringRef.current);
-      if (pollMs <= 0) {
-        return;
-      }
-
-      recoveryTimer = window.setInterval(() => updateFromGlobalCursor(), pollMs);
-    }
-
-    function syncRecoveryPolling(): void {
-      if (cursorIgnoringRef.current) {
-        startRecoveryPolling();
-      } else {
-        stopRecoveryPolling();
-      }
-    }
-
-    async function setCursorIgnoring(ignore: boolean): Promise<void> {
-      if (disposed) {
-        return;
-      }
-
-      if (cursorIgnoringRef.current === ignore) {
-        return;
-      }
-
-      const previous = cursorIgnoringRef.current;
-      cursorIgnoringRef.current = ignore;
-      syncRecoveryPolling();
-      try {
-        await appWindow.setIgnoreCursorEvents(ignore);
-      } catch {
-        cursorIgnoringRef.current = previous;
-        syncRecoveryPolling();
-      }
-    }
-
-    function updateFromLocalPoint(point: Point | null): void {
-      if (cursorIgnoringRef.current) {
-        return;
-      }
-
-      const interactiveRects = getInteractiveRects();
-      void setCursorIgnoring(
-        shouldIgnoreCursorEvents({
-          pointerIsDragging: pointerStart.current !== null,
-          point,
-          rects: interactiveRects,
-        }),
-      );
-    }
-
-    function handleLocalPointerMove(event: MouseEvent | PointerEvent): void {
-      updateFromLocalPoint({ x: event.clientX, y: event.clientY });
-    }
-
-    function updateFromGlobalCursor(includeActiveWindow = false): void {
-      if (updateInFlight || disposed) {
-        return;
-      }
-
-      updateInFlight = true;
-      void (async () => {
-        try {
-          if (!includeActiveWindow && !cursorIgnoringRef.current) {
-            return;
-          }
-
-          const interactiveRects = getInteractiveRects();
-          if (pointerStart.current || interactiveRects.length === 0) {
-            await setCursorIgnoring(false);
-            return;
-          }
-
-          const [cursor, windowPosition, scaleFactor] = await Promise.all([
-            cursorPosition(),
-            appWindow.outerPosition(),
-            appWindow.scaleFactor(),
-          ]);
-          const localCursor = {
-            x: (cursor.x - windowPosition.x) / scaleFactor,
-            y: (cursor.y - windowPosition.y) / scaleFactor,
-          };
-
-          await setCursorIgnoring(
-            shouldIgnoreCursorEvents({
-              pointerIsDragging: false,
-              point: localCursor,
-              rects: interactiveRects,
-            }),
-          );
-        } finally {
-          updateInFlight = false;
-        }
-      })();
-    }
-
-    window.addEventListener("pointermove", handleLocalPointerMove);
-    window.addEventListener("pointerdown", handleLocalPointerMove);
-    window.addEventListener("pointerup", handleLocalPointerMove);
-    window.addEventListener("mousemove", handleLocalPointerMove);
-    updateFromGlobalCursor(true);
-
-    return () => {
-      disposed = true;
-      window.removeEventListener("pointermove", handleLocalPointerMove);
-      window.removeEventListener("pointerdown", handleLocalPointerMove);
-      window.removeEventListener("pointerup", handleLocalPointerMove);
-      window.removeEventListener("mousemove", handleLocalPointerMove);
-      stopRecoveryPolling();
-      if (cursorIgnoringRef.current) {
-        cursorIgnoringRef.current = false;
-        void appWindow.setIgnoreCursorEvents(false).catch(() => undefined);
-      }
-    };
-  }, [surfacedSpark]);
 
   const playReaction = useCallback((reaction: PetState, duration = REACTION_MS) => {
     if (reactionTimer.current !== null) {
@@ -864,7 +707,7 @@ export default function PetSprite() {
   return (
     <div className="pet-stack">
       {surfacedSpark && (
-        <aside ref={sparkBubbleRef} className="spark-bubble" aria-live="polite">
+        <aside className="spark-bubble" aria-live="polite">
           <p>{surfacedSpark.text}</p>
           <div className="spark-bubble-actions">
             <button type="button" onClick={() => resolveSparkById(surfacedSpark.id)}>
@@ -877,7 +720,6 @@ export default function PetSprite() {
         </aside>
       )}
       <button
-        ref={petButtonRef}
         className="pet-button"
         style={petButtonStyle}
         type="button"
