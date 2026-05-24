@@ -1,4 +1,4 @@
-import { emit } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { type PointerEvent as ReactPointerEvent, useEffect, useMemo, useState } from "react";
 import {
@@ -7,7 +7,9 @@ import {
   getPetAgeLabel,
   readOrCreateInstallDate,
 } from "./dashboardStats";
+import { getSyncedSparks } from "./dashboardSync";
 import {
+  SPARKS_STORAGE_KEY,
   type Spark,
   addSpark,
   getPendingSparks,
@@ -24,6 +26,9 @@ import {
   normalizeSparkCadence,
   readStoredBoolean,
 } from "./settings";
+
+const SPARKS_CHANGED_EVENT = "cabbagecrow-sparks-changed";
+const SETTINGS_CHANGED_EVENT = "cabbagecrow-settings-changed";
 
 function isTauriRuntime(): boolean {
   return "__TAURI_INTERNALS__" in window;
@@ -66,6 +71,15 @@ function emitLocalAndNative(eventName: string): void {
   if (isTauriRuntime()) {
     void emit(eventName).catch(() => undefined);
   }
+}
+
+function persistSparks(sparks: Spark[]): void {
+  try {
+    writeStoredSparks(window.localStorage, sparks);
+  } catch {
+    // Dashboard still works in memory if storage is unavailable.
+  }
+  emitLocalAndNative(SPARKS_CHANGED_EVENT);
 }
 
 function closeDashboard(): void {
@@ -114,13 +128,37 @@ export default function PetDashboard() {
   const nudged = pending.find((spark) => spark.id === nudgedId) ?? null;
 
   useEffect(() => {
-    try {
-      writeStoredSparks(window.localStorage, sparks);
-    } catch {
-      // Dashboard still works in memory if storage is unavailable.
+    const refreshSparks = () => {
+      const storedSparks = readSparks();
+      setSparks((current) => getSyncedSparks(current, storedSparks));
+      setNudgedId((currentId) =>
+        currentId && getPendingSparks(storedSparks).some((spark) => spark.id === currentId)
+          ? currentId
+          : null,
+      );
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === SPARKS_STORAGE_KEY) {
+        refreshSparks();
+      }
+    };
+
+    window.addEventListener(SPARKS_CHANGED_EVENT, refreshSparks);
+    window.addEventListener("storage", onStorage);
+
+    let unlistenSparks: (() => void) | null = null;
+    if (isTauriRuntime()) {
+      void listen(SPARKS_CHANGED_EVENT, refreshSparks).then((unlisten) => {
+        unlistenSparks = unlisten;
+      });
     }
-    emitLocalAndNative("cabbagecrow-sparks-changed");
-  }, [sparks]);
+
+    return () => {
+      window.removeEventListener(SPARKS_CHANGED_EVENT, refreshSparks);
+      window.removeEventListener("storage", onStorage);
+      unlistenSparks?.();
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -129,11 +167,13 @@ export default function PetDashboard() {
     } catch {
       // Controls still reflect the active session even if persistence fails.
     }
-    emitLocalAndNative("cabbagecrow-settings-changed");
+    emitLocalAndNative(SETTINGS_CHANGED_EVENT);
   }, [freeRangeEnabled, sparkCadence]);
 
   function addDraft() {
-    setSparks((current) => addSpark(current, draft));
+    const nextSparks = addSpark(sparks, draft);
+    setSparks(nextSparks);
+    persistSparks(nextSparks);
     setDraft("");
   }
 
@@ -145,11 +185,15 @@ export default function PetDashboard() {
     }
 
     setNudgedId(spark.id);
-    setSparks((current) => surfaceSpark(current, spark.id));
+    const nextSparks = surfaceSpark(sparks, spark.id);
+    setSparks(nextSparks);
+    persistSparks(nextSparks);
   }
 
   function resolve(id: string) {
-    setSparks((current) => resolveSpark(current, id));
+    const nextSparks = resolveSpark(sparks, id);
+    setSparks(nextSparks);
+    persistSparks(nextSparks);
     if (nudgedId === id) {
       setNudgedId(null);
     }
