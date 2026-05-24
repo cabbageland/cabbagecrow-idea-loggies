@@ -75,16 +75,19 @@ fn fullscreen_pet_policy() -> MacWindowPolicy {
 
 fn fullscreen_pet_app_policy() -> MacAppPolicy {
     MacAppPolicy {
-        uses_accessory_activation_policy: true,
+        uses_accessory_activation_policy: false,
     }
 }
 
 #[cfg(target_os = "macos")]
 fn apply_fullscreen_app_policy(app: &tauri::App) -> tauri::Result<()> {
-    if fullscreen_pet_app_policy().uses_accessory_activation_policy {
-        app.handle()
-            .set_activation_policy(tauri::ActivationPolicy::Accessory)?;
-    }
+    let activation_policy = if fullscreen_pet_app_policy().uses_accessory_activation_policy {
+        tauri::ActivationPolicy::Accessory
+    } else {
+        tauri::ActivationPolicy::Regular
+    };
+
+    app.handle().set_activation_policy(activation_policy)?;
 
     Ok(())
 }
@@ -168,7 +171,7 @@ mod tests {
     }
 
     #[test]
-    fn fullscreen_pet_app_policy_uses_accessory_activation() {
-        assert!(fullscreen_pet_app_policy().uses_accessory_activation_policy);
+    fn fullscreen_pet_app_policy_keeps_dock_icon_visible() {
+        assert!(!fullscreen_pet_app_policy().uses_accessory_activation_policy);
     }
 }
