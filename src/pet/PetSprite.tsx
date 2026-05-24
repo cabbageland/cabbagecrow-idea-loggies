@@ -11,8 +11,14 @@ import {
 } from "@tauri-apps/api/window";
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getFrameDuration, getFrameStyle, getStateConfig } from "./animation";
-import { getInteractiveRect, isPointInsideInteractiveRects } from "./cursorPassthrough";
-import { chooseFreeRangeTarget, interpolatePosition } from "./freeRange";
+import {
+  type InteractiveRect,
+  type Point,
+  getCursorPassthroughPollMs,
+  getInteractiveRect,
+  shouldIgnoreCursorEvents,
+} from "./cursorPassthrough";
+import { chooseFreeRangeTarget, interpolatePosition, shouldUpdateFreeRangePosition } from "./freeRange";
 import { getDragDirection, getKeyboardMode, getModifiedClickMode } from "./interaction";
 import { parseShortcutUrl } from "./shortcut";
 import {
@@ -246,38 +252,99 @@ export default function PetSprite() {
     }
 
     let updateInFlight = false;
+    let recoveryTimer: number | null = null;
+    let disposed = false;
     const appWindow = getCurrentWindow();
 
-    const setCursorIgnoring = async (ignore: boolean) => {
+    function getInteractiveRects(): InteractiveRect[] {
+      return [getInteractiveRect(petButtonRef.current), getInteractiveRect(sparkBubbleRef.current)].filter(
+        (rect): rect is InteractiveRect => rect !== null,
+      );
+    }
+
+    function stopRecoveryPolling(): void {
+      if (recoveryTimer === null) {
+        return;
+      }
+
+      window.clearInterval(recoveryTimer);
+      recoveryTimer = null;
+    }
+
+    function startRecoveryPolling(): void {
+      if (recoveryTimer !== null || disposed) {
+        return;
+      }
+
+      const pollMs = getCursorPassthroughPollMs(cursorIgnoringRef.current);
+      if (pollMs <= 0) {
+        return;
+      }
+
+      recoveryTimer = window.setInterval(() => updateFromGlobalCursor(), pollMs);
+    }
+
+    function syncRecoveryPolling(): void {
+      if (cursorIgnoringRef.current) {
+        startRecoveryPolling();
+      } else {
+        stopRecoveryPolling();
+      }
+    }
+
+    async function setCursorIgnoring(ignore: boolean): Promise<void> {
+      if (disposed) {
+        return;
+      }
+
       if (cursorIgnoringRef.current === ignore) {
         return;
       }
 
+      const previous = cursorIgnoringRef.current;
       cursorIgnoringRef.current = ignore;
+      syncRecoveryPolling();
       try {
         await appWindow.setIgnoreCursorEvents(ignore);
       } catch {
-        cursorIgnoringRef.current = !ignore;
+        cursorIgnoringRef.current = previous;
+        syncRecoveryPolling();
       }
-    };
+    }
 
-    const updateCursorPassthrough = () => {
-      if (updateInFlight) {
+    function updateFromLocalPoint(point: Point | null): void {
+      if (cursorIgnoringRef.current) {
+        return;
+      }
+
+      const interactiveRects = getInteractiveRects();
+      void setCursorIgnoring(
+        shouldIgnoreCursorEvents({
+          pointerIsDragging: pointerStart.current !== null,
+          point,
+          rects: interactiveRects,
+        }),
+      );
+    }
+
+    function handleLocalPointerMove(event: MouseEvent | PointerEvent): void {
+      updateFromLocalPoint({ x: event.clientX, y: event.clientY });
+    }
+
+    function updateFromGlobalCursor(includeActiveWindow = false): void {
+      if (updateInFlight || disposed) {
         return;
       }
 
       updateInFlight = true;
       void (async () => {
         try {
-          if (pointerStart.current) {
-            await setCursorIgnoring(false);
+          if (!includeActiveWindow && !cursorIgnoringRef.current) {
             return;
           }
 
-          const interactiveRects = [getInteractiveRect(petButtonRef.current), getInteractiveRect(sparkBubbleRef.current)]
-            .filter((rect) => rect !== null);
-
-          if (interactiveRects.length === 0) {
+          const interactiveRects = getInteractiveRects();
+          if (pointerStart.current || interactiveRects.length === 0) {
             await setCursorIgnoring(false);
             return;
           }
@@ -292,18 +359,32 @@ export default function PetSprite() {
             y: (cursor.y - windowPosition.y) / scaleFactor,
           };
 
-          await setCursorIgnoring(!isPointInsideInteractiveRects(localCursor, interactiveRects));
+          await setCursorIgnoring(
+            shouldIgnoreCursorEvents({
+              pointerIsDragging: false,
+              point: localCursor,
+              rects: interactiveRects,
+            }),
+          );
         } finally {
           updateInFlight = false;
         }
       })();
-    };
+    }
 
-    updateCursorPassthrough();
-    const timer = window.setInterval(updateCursorPassthrough, 64);
+    window.addEventListener("pointermove", handleLocalPointerMove);
+    window.addEventListener("pointerdown", handleLocalPointerMove);
+    window.addEventListener("pointerup", handleLocalPointerMove);
+    window.addEventListener("mousemove", handleLocalPointerMove);
+    updateFromGlobalCursor(true);
 
     return () => {
-      window.clearInterval(timer);
+      disposed = true;
+      window.removeEventListener("pointermove", handleLocalPointerMove);
+      window.removeEventListener("pointerdown", handleLocalPointerMove);
+      window.removeEventListener("pointerup", handleLocalPointerMove);
+      window.removeEventListener("mousemove", handleLocalPointerMove);
+      stopRecoveryPolling();
       if (cursorIgnoringRef.current) {
         cursorIgnoringRef.current = false;
         void appWindow.setIgnoreCursorEvents(false).catch(() => undefined);
@@ -584,11 +665,15 @@ export default function PetSprite() {
       lastDirection.current = direction;
       setState(direction === "right" ? "running-right" : "running-left");
       const startedAt = performance.now();
+      let lastPositionUpdate = Number.NEGATIVE_INFINITY;
 
       const tick = (now: number) => {
         const progress = Math.min(1, (now - startedAt) / FREE_RANGE_TRAVEL_MS);
-        const position = interpolatePosition(from, target, progress);
-        void appWindow.setPosition(new PhysicalPosition(position.x, position.y)).catch(() => undefined);
+        if (shouldUpdateFreeRangePosition(now, lastPositionUpdate, progress)) {
+          const position = interpolatePosition(from, target, progress);
+          lastPositionUpdate = now;
+          void appWindow.setPosition(new PhysicalPosition(position.x, position.y)).catch(() => undefined);
+        }
 
         if (progress < 1 && freeRangeEnabledRef.current) {
           freeRangeFlight.current = window.requestAnimationFrame(tick);

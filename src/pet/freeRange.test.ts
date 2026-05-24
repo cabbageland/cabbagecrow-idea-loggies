@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { chooseFreeRangeTarget, interpolatePosition } from "./freeRange";
+import {
+  FREE_RANGE_POSITION_UPDATE_MS,
+  chooseFreeRangeTarget,
+  interpolatePosition,
+  shouldUpdateFreeRangePosition,
+} from "./freeRange";
 
 describe("free range movement", () => {
   it("chooses a target inside safe monitor bounds", () => {
@@ -18,5 +23,12 @@ describe("free range movement", () => {
       x: 25,
       y: 13,
     });
+  });
+
+  it("throttles native window position updates during flight", () => {
+    expect(shouldUpdateFreeRangePosition(100, 100, 0.2)).toBe(false);
+    expect(shouldUpdateFreeRangePosition(100 + FREE_RANGE_POSITION_UPDATE_MS - 1, 100, 0.2)).toBe(false);
+    expect(shouldUpdateFreeRangePosition(100 + FREE_RANGE_POSITION_UPDATE_MS, 100, 0.2)).toBe(true);
+    expect(shouldUpdateFreeRangePosition(120, 100, 1)).toBe(true);
   });
 });

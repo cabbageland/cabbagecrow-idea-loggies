@@ -15,6 +15,8 @@ export interface Size {
   height: number;
 }
 
+export const FREE_RANGE_POSITION_UPDATE_MS = 50;
+
 export function chooseFreeRangeTarget(
   bounds: Bounds,
   windowSize: Size,
@@ -36,4 +38,8 @@ export function interpolatePosition(from: Point, to: Point, progress: number): P
     x: Math.round(from.x + (to.x - from.x) * safeProgress),
     y: Math.round(from.y + (to.y - from.y) * safeProgress),
   };
+}
+
+export function shouldUpdateFreeRangePosition(now: number, lastUpdatedAt: number, progress: number): boolean {
+  return progress >= 1 || now - lastUpdatedAt >= FREE_RANGE_POSITION_UPDATE_MS;
 }
