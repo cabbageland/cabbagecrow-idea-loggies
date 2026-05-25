@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "CabbageCrow",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "identifier": "com.tracyhan.cabbagecrow",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -87,6 +87,9 @@
       "icons/icon.ico"
     ],
     "shortDescription": "A playful CabbageCrow desktop pet.",
-    "longDescription": "A standalone macOS desktop pet that animates a CabbageCrow companion."
+    "longDescription": "A standalone macOS desktop pet that animates a CabbageCrow companion.",
+    "macOS": {
+      "signingIdentity": "-"
+    }
   }
 }

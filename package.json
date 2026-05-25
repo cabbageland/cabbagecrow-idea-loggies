@@ -1,6 +1,6 @@
 {
   "name": "cabbagecrow-desktop-pet",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "test": "vitest",
     "asset:cabbagecrow": "python3 scripts/build_cabbagecrow_atlas.py",
+    "release:macos": "bash scripts/package_macos_release.sh",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
   },
