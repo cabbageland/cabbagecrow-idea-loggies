@@ -10,26 +10,55 @@ use std::{
 use tauri::{Emitter, Manager, RunEvent, State};
 
 const MAC_JOIN_ALL_SPACES: usize = 1 << 0;
+const MAC_MOVE_TO_ACTIVE_SPACE: usize = 1 << 1;
+const MAC_MANAGED: usize = 1 << 2;
+const MAC_TRANSIENT: usize = 1 << 3;
 const MAC_STATIONARY: usize = 1 << 4;
+const MAC_PARTICIPATES_IN_CYCLE: usize = 1 << 5;
 const MAC_IGNORES_CYCLE: usize = 1 << 6;
+const MAC_FULLSCREEN_PRIMARY: usize = 1 << 7;
 const MAC_FULLSCREEN_AUXILIARY: usize = 1 << 8;
+const MAC_FULLSCREEN_NONE: usize = 1 << 9;
+const MAC_PRIMARY: usize = 1 << 16;
+const MAC_AUXILIARY: usize = 1 << 17;
 const MAC_CAN_JOIN_ALL_APPLICATIONS: usize = 1 << 18;
 #[cfg(test)]
 const MAC_FLOATING_WINDOW_LEVEL: isize = 3;
 const MAC_SCREEN_SAVER_WINDOW_LEVEL: isize = 1000;
+const MAC_WINDOW_LEVEL_STEP_ABOVE_FULLSCREEN_SHIELDING: isize = 1;
 const OVERLAY_POLICY_REFRESH_INTERVAL_MS: u64 = 1_000;
 const OVERLAY_WINDOW_LABELS: [&str; 2] = ["main", "dashboard"];
+const MAC_SPACE_SCOPE_MASK: usize = MAC_JOIN_ALL_SPACES | MAC_MOVE_TO_ACTIVE_SPACE;
+const MAC_EXPOSE_VISIBILITY_MASK: usize = MAC_MANAGED | MAC_TRANSIENT | MAC_STATIONARY;
+const MAC_CYCLE_MASK: usize = MAC_PARTICIPATES_IN_CYCLE | MAC_IGNORES_CYCLE;
+const MAC_FULLSCREEN_ROLE_MASK: usize =
+    MAC_FULLSCREEN_PRIMARY | MAC_FULLSCREEN_AUXILIARY | MAC_FULLSCREEN_NONE;
+const MAC_APPLICATION_JOIN_MASK: usize =
+    MAC_PRIMARY | MAC_AUXILIARY | MAC_CAN_JOIN_ALL_APPLICATIONS;
+const MAC_COLLECTION_BEHAVIOR_REPLACED_BITS: usize = MAC_SPACE_SCOPE_MASK
+    | MAC_EXPOSE_VISIBILITY_MASK
+    | MAC_CYCLE_MASK
+    | MAC_FULLSCREEN_ROLE_MASK
+    | MAC_APPLICATION_JOIN_MASK;
 
 #[derive(Debug, Clone, Copy)]
 struct MacWindowPolicy {
     collection_behavior_bits: usize,
     window_level: isize,
     has_shadow: bool,
+    hides_on_deactivate: bool,
+    can_hide: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
 struct MacAppPolicy {
     uses_accessory_activation_policy: bool,
+}
+
+#[cfg(target_os = "macos")]
+#[link(name = "CoreGraphics", kind = "framework")]
+extern "C" {
+    fn CGShieldingWindowLevel() -> i32;
 }
 
 #[derive(Default)]
@@ -93,13 +122,36 @@ fn handle_opened_urls(app: &tauri::AppHandle, urls: Vec<tauri::Url>) {
 fn fullscreen_pet_policy() -> MacWindowPolicy {
     MacWindowPolicy {
         collection_behavior_bits: MAC_JOIN_ALL_SPACES
-            | MAC_STATIONARY
+            | MAC_TRANSIENT
             | MAC_IGNORES_CYCLE
             | MAC_FULLSCREEN_AUXILIARY
             | MAC_CAN_JOIN_ALL_APPLICATIONS,
-        window_level: MAC_SCREEN_SAVER_WINDOW_LEVEL,
+        window_level: fullscreen_overlay_window_level(),
         has_shadow: false,
+        hides_on_deactivate: false,
+        can_hide: false,
     }
+}
+
+fn collection_behavior_for_policy(current_behavior: usize, policy: MacWindowPolicy) -> usize {
+    (current_behavior & !MAC_COLLECTION_BEHAVIOR_REPLACED_BITS) | policy.collection_behavior_bits
+}
+
+fn overlay_window_level_for_shielding(shielding_level: isize) -> isize {
+    (shielding_level + MAC_WINDOW_LEVEL_STEP_ABOVE_FULLSCREEN_SHIELDING)
+        .max(MAC_SCREEN_SAVER_WINDOW_LEVEL)
+}
+
+#[cfg(target_os = "macos")]
+fn fullscreen_overlay_window_level() -> isize {
+    let shielding_level = unsafe { CGShieldingWindowLevel() as isize };
+
+    overlay_window_level_for_shielding(shielding_level)
+}
+
+#[cfg(not(target_os = "macos"))]
+fn fullscreen_overlay_window_level() -> isize {
+    MAC_SCREEN_SAVER_WINDOW_LEVEL
 }
 
 fn fullscreen_pet_app_policy() -> MacAppPolicy {
@@ -139,7 +191,7 @@ fn apply_fullscreen_pet_policy(window: &tauri::WebviewWindow) {
     let policy = fullscreen_pet_policy();
     let ns_window = unsafe { &*(ns_window.cast::<AnyObject>()) };
     let current_behavior: usize = unsafe { msg_send![ns_window, collectionBehavior] };
-    let behavior = current_behavior | policy.collection_behavior_bits;
+    let behavior = collection_behavior_for_policy(current_behavior, policy);
     let should_order_front = should_order_overlay_window(window.is_visible().unwrap_or(true));
 
     unsafe {
@@ -147,6 +199,10 @@ fn apply_fullscreen_pet_policy(window: &tauri::WebviewWindow) {
         let _: () = msg_send![ns_window, setLevel: policy.window_level];
         let has_shadow = Bool::new(policy.has_shadow);
         let _: () = msg_send![ns_window, setHasShadow: has_shadow];
+        let hides_on_deactivate = Bool::new(policy.hides_on_deactivate);
+        let _: () = msg_send![ns_window, setHidesOnDeactivate: hides_on_deactivate];
+        let can_hide = Bool::new(policy.can_hide);
+        let _: () = msg_send![ns_window, setCanHide: can_hide];
         if should_order_front {
             let _: () = msg_send![ns_window, orderFrontRegardless];
         }
@@ -272,9 +328,50 @@ mod tests {
         assert!(policy.collection_behavior_bits & MAC_JOIN_ALL_SPACES != 0);
         assert!(policy.collection_behavior_bits & MAC_CAN_JOIN_ALL_APPLICATIONS != 0);
         assert!(policy.collection_behavior_bits & MAC_FULLSCREEN_AUXILIARY != 0);
-        assert!(policy.collection_behavior_bits & MAC_STATIONARY != 0);
+        assert!(policy.collection_behavior_bits & MAC_TRANSIENT != 0);
+        assert_eq!(policy.collection_behavior_bits & MAC_STATIONARY, 0);
         assert!(policy.window_level > MAC_FLOATING_WINDOW_LEVEL);
         assert!(!policy.has_shadow);
+    }
+
+    #[test]
+    fn fullscreen_pet_policy_stays_visible_when_other_apps_activate() {
+        let policy = fullscreen_pet_policy();
+
+        assert!(!policy.hides_on_deactivate);
+        assert!(!policy.can_hide);
+    }
+
+    #[test]
+    fn fullscreen_pet_policy_replaces_conflicting_collection_behavior_groups() {
+        let current_behavior = MAC_MOVE_TO_ACTIVE_SPACE
+            | MAC_MANAGED
+            | MAC_STATIONARY
+            | MAC_PARTICIPATES_IN_CYCLE
+            | MAC_FULLSCREEN_PRIMARY
+            | MAC_FULLSCREEN_NONE
+            | MAC_PRIMARY
+            | MAC_AUXILIARY;
+        let behavior = collection_behavior_for_policy(current_behavior, fullscreen_pet_policy());
+
+        assert_eq!(behavior & MAC_SPACE_SCOPE_MASK, MAC_JOIN_ALL_SPACES);
+        assert_eq!(behavior & MAC_EXPOSE_VISIBILITY_MASK, MAC_TRANSIENT);
+        assert_eq!(behavior & MAC_CYCLE_MASK, MAC_IGNORES_CYCLE);
+        assert_eq!(behavior & MAC_FULLSCREEN_ROLE_MASK, MAC_FULLSCREEN_AUXILIARY);
+        assert_eq!(
+            behavior & MAC_APPLICATION_JOIN_MASK,
+            MAC_CAN_JOIN_ALL_APPLICATIONS
+        );
+    }
+
+    #[test]
+    fn fullscreen_pet_policy_places_pet_above_native_fullscreen_shielding() {
+        let shielding_level = MAC_SCREEN_SAVER_WINDOW_LEVEL + 250;
+
+        assert_eq!(
+            overlay_window_level_for_shielding(shielding_level),
+            shielding_level + 1
+        );
     }
 
     #[test]
