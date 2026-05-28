@@ -6,6 +6,8 @@ A standalone macOS desktop pet built with Tauri, React, and TypeScript. CabbageC
 
 CabbageCrow pairs a tiny desktop companion with an "idea loggies" board: capture stray sparks, let the pet randomly nudge one back into focus, and resolve ideas when they should leave the pool.
 
+Download the macOS app from the [latest GitHub release](https://github.com/cabbageland/cabbagecrow-idea-loggies/releases/latest).
+
 ## What Is Included
 
 - Transparent always-on-top CabbageCrow pet window.
